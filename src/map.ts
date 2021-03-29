@@ -212,7 +212,7 @@ export class Map {
                                                      "type":   item.type}];
                 }
             })
-            this.rail = [...this.rail, ...split_rail].filter(x => x.coords.length > 0);
+            this.rail = [...this.rail, ...split_rail].filter(x => x.coords.length > 1);
         }
         if (state == State.DelI) {
             this.infra.map(item => item.coords = item.coords.filter(coord => 
