@@ -43,6 +43,17 @@ function HCoord_eq (x: HCoord, y: HCoord): boolean {
 // MRT  Yellow
 // LR   Green
 // Road Red
+//
+//V全部用電腦操作
+//V預算消耗的預知要做明顯一點, aka 改 UI
+//V每個階段都要有log
+//V超支時要有警訊(債留子孫)
+//V高速公路起點要預先訂好
+//V醣鐵
+//?標示各階段可以興建的項目
+//U改圖示：高架化鐵路
+//V部分顏色要更改
+
 
 // These classes save the properties of each land
 class Rail {
@@ -473,7 +484,7 @@ export class Canvas {
         this.set_state(this.state);
     }
 
-    get_log (): String {
+    get_log (): string {
         return JSON.stringify(this.log);
     }
 
@@ -483,5 +494,24 @@ export class Canvas {
                                   "type":   0}];
         this.map.update_stage();
         this.set_state(this.state);
+    }
+
+    exec_log_s (log: {"state":  State,
+                      "coords": [HCoord],
+                      "type":   number}): void {
+        if (log.state == State.Stage) {
+            this.update_stage();
+        }
+        else {
+            this.state = log.state;
+            this.sel   = log.coords;
+            this.build(log.type);
+        }
+        this.set_state(State.Stage)
+    }
+    exec_log (logs: [{"state":  State,
+                      "coords": [HCoord],
+                      "type":   number}]): void {
+        logs.map(x => this.exec_log_s(x))
     }
 }
