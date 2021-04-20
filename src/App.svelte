@@ -24,10 +24,18 @@
     let nconv_r    = 0;
     let est_cost   = 0;
     let est_nconv  = 0;
-    let land_price = 0;
     let state      = 0;
     let stage_count= 0;
     let log_str    = "";
+
+    let land_price = 0;
+    let railh_len  = 0;
+    let raill_len  = 0;
+    let railn_len  = 0;
+    let road_len   = 0;
+    let rail_num   = 0;
+    let infra_num  = 0;
+    let wow_num    = 0;
 
     let slide_state = 1;
 
@@ -38,6 +46,13 @@
             nconv         = map.nconv;
             nconv_r       = map.nconv_r;
             land_price    = map.land_price;
+            railh_len     = map.railh_len;
+            raill_len     = map.raill_len;
+            railn_len     = map.railn_len;
+            road_len      = map.road_len;
+            rail_num      = map.rail_num;
+            infra_num     = map.infra_num;
+            wow_num       = map.wow_num;
             stage_count   = map.stage_count;
             land_profile  = stage[stage_count].land_profile;
             rail_profile  = stage[stage_count].rail_profile;
@@ -59,9 +74,10 @@
         }
     }
 
+    let init_info;
     async function init() {
-        const res       = await fetch('./init.json');
-        const init_info = await res.json();
+        const res = await fetch('./init.json');
+        init_info = await res.json();
 
         nstage = init_info.nstage;
         stage  = init_info.stage;
@@ -78,7 +94,6 @@
         // Check slide state
         const urlParams = new URLSearchParams(window.location.search);
         slide_state     = 1 - (urlParams.get('slide') === null);
-        console.log(urlParams.get('slide'), slide_state)
         // Suppose only one cookie
         const cookies = document.cookie.split(';')[0].split('=');
         if (cookies.length == 2 && cookies[1] != "[]" && slide_state == 0) {
@@ -108,13 +123,23 @@
             slide_log = JSON.parse(log_str);
             slide_state = 2;
         }
-        console.log(log_str)
-        console.log(slide_log)
-        console.log(slide_idx)
         if (slide_idx < slide_log.length) {
             canvas.exec_log_s(slide_log[slide_idx])
             slide_idx += 1;
         }
+    }
+    function slide_show_prev () {
+        if (slide_idx == 0)
+            return
+        map    = new Map(init_info.map,
+                         init_info.nstage,
+                         init_info.stage);
+        canvas = new Canvas(canvas_obj, 
+                            (() => {trigger_val += 1}),
+                            map);
+        slide_idx -= 1
+        for (let i = 0; i < slide_idx; ++i)
+            canvas.exec_log_s(slide_log[i])
     }
 
 </script>
@@ -129,7 +154,7 @@
     </div>
     <div style="float: right; text-align:left;">
         <h1> TAKAO Fa Da Cai !</h1>
-        <h2> v0.4</h2>
+        <h2> v1.0</h2>
 
         <table>
             <tr>
@@ -156,6 +181,34 @@
             <tr>
                 <th> 公告現值： </th>
                 <th> {land_price.toFixed(1)} </th>
+            </tr>
+            <tr>
+                <th> TAI 鐵長度： </th>
+                <th> {railh_len.toFixed(1)} </th>
+            </tr>
+            <tr>
+                <th> 立體化長度： </th>
+                <th> {railn_len.toFixed(1)} </th>
+            </tr>
+            <tr>
+                <th> 其他鐵路長度： </th>
+                <th> {raill_len.toFixed(1)} </th>
+            </tr>
+            <tr>
+                <th> 道路長度： </th>
+                <th> {road_len.toFixed(1)} </th>
+            </tr>
+            <tr>
+                <th> 鐵路設施數量： </th>
+                <th> {rail_num.toFixed(1)} </th>
+            </tr>
+            <tr>
+                <th> 基礎建設數量： </th>
+                <th> {infra_num.toFixed(1)} </th>
+            </tr>
+            <tr>
+                <th> 世界奇觀數量： </th>
+                <th> {wow_num.toFixed(1)} </th>
             </tr>
             <tr>
                 <th colspan=3>
@@ -265,6 +318,8 @@
                 </th>
             </tr>
             <tr>
+                <th><button on:click={() => slide_show_prev()}>上一步</button></th>
+                <th>{slide_idx} / {slide_log.length} </th>
                 <th><button on:click={() => slide_show()}>下一步</button></th>
             </tr>
             <tr>

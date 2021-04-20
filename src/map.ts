@@ -97,7 +97,15 @@ export class Map {
     budget_r:   number;
     nconv:      number;
     nconv_r:    number;
+    
     land_price: number;
+    railh_len:  number;
+    raill_len:  number;
+    railn_len:  number;
+    road_len:   number;
+    rail_num:   number;
+    infra_num:  number;
+    wow_num:    number;
 
     constructor(map:   {'num_c':  number,
                         'num_r':  number,
@@ -112,8 +120,8 @@ export class Map {
                         'infra_profile': any}[]) {
         this.num_c = map.num_c;
         this.num_r = map.num_r;
-        this.rail  = map.rail;
-        this.infra = map.infra;
+        this.rail  = JSON.parse(JSON.stringify(map.rail));
+        this.infra = JSON.parse(JSON.stringify(map.infra));
         this.land  = new Array(this.num_r * this.num_c);
         this.for_any_idx((coord, x) => this.land[x] =  map.land[coord.r][coord.c]);
 
@@ -133,6 +141,8 @@ export class Map {
         this.rail_profile  = this.stage[this.stage_count].rail_profile;
         this.infra_profile = this.stage[this.stage_count].infra_profile;
         this.comp_land_price();
+        this.comp_rails_len();
+        this.comp_infra();
     }
 
     get_idx (coord: HCoord): number {
@@ -169,6 +179,15 @@ export class Map {
             f(this.infra[i]);
     }
 
+    comp_rail_len (rail: Rail): number {
+        let coords_xy: Coord[] = rail.coords.map(grid_to_hex_center);
+        const len_del: number[] = coords_xy.map((coord: Coord, idx: number) =>
+            (idx == 0)? 0: Math.sqrt(Math.pow(coord.x - coords_xy[idx - 1].x, 2)
+                                   + Math.pow(coord.y - coords_xy[idx - 1].y, 2)));
+        const len: number = len_del.reduce((acc: number, del: number) => acc + del) / sqrt3;
+        return len;
+    }
+
     comp_cost (state: State, coords: HCoord[], ntype: number): {"cost": number, "nconv": number} {
         let cost:  number = 0;
         let nconv: number = 0;
@@ -178,12 +197,8 @@ export class Map {
                 nconv += 1;});
         }
         if (state == State.Rail && coords.length > 1) {
-            let new_rail: Rail = new Rail(coords, ntype);
-            let coords_xy: Coord[] = coords.map(grid_to_hex_center);
-            const len_del: number[] = coords_xy.map((coord: Coord, idx: number) =>
-                (idx == 0)? 0: Math.sqrt(Math.pow(coord.x - coords_xy[idx - 1].x, 2)
-                                       + Math.pow(coord.y - coords_xy[idx - 1].y, 2)));
-            const len: number = len_del.reduce((acc: number, del: number) => acc + del) / sqrt3;
+            const new_rail: Rail = new Rail(coords, ntype);
+            const len: number = this.comp_rail_len(new_rail);
             cost = len * this.get_rail_profile(new_rail).tax
         }
         if (state == State.Infra) {
@@ -235,12 +250,63 @@ export class Map {
         let nconv = res.nconv;
         this.budget_r -= cost;
         this.nconv_r  -= nconv;
+
+        this.comp_land_price();
+        this.comp_rails_len();
+        this.comp_infra();
     }
 
     comp_land_price (): void {
         this.land_price = 0;
         this.for_any_idx((x) => {
             this.land_price += this.get_land_profile(x).price;
+        });
+    }
+
+    comp_rails_len (): void {
+        this.railh_len = 0;
+        this.raill_len = 0;
+        this.railn_len = 0;
+        this.road_len  = 0;
+        this.for_any_rail((x) => {
+            switch (x.type) {
+                case 1:
+                    this.railh_len += this.comp_rail_len(x);
+                    break;
+                case 2:
+                case 3:
+                    this.raill_len += this.comp_rail_len(x);
+                    break;
+                case 4:
+                case 5:
+                    this.railh_len += this.comp_rail_len(x);
+                case 6:
+                case 7:
+                    this.railn_len += this.comp_rail_len(x);
+                    break;
+                case 8:
+                case 9:
+                case 10:
+                    this.road_len += this.comp_rail_len(x);
+                    break;
+            }
+        });
+    }
+
+    comp_infra (): void {
+        this.rail_num  = 0;
+        this.infra_num = 0;
+        this.wow_num   = 0;
+        this.for_any_infra((x) => {
+            if (x.type <= 4) {
+                this.rail_num += x.coords.length;
+            }
+            else if (x.type <= 13) {
+                this.infra_num += x.coords.length;
+            }
+            else {
+                this.wow_num += x.coords.length;
+            }
         });
     }
 }
